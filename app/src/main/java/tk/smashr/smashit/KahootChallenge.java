@@ -32,7 +32,11 @@ class KahootChallenge {
                     public void onResponse(JSONObject response) {
                         try {
                             final String token = response.getJSONObject("headers").getString("x-kahoot-session-token");
-                            kahootConsole.evaluateJavascript(response.getString("challenge"), new ValueCallback<String>() {
+                            //Removes angular check, very hacky will break
+                            String challenge = response.getString("challenge");
+                            challenge = challenge.replaceAll("this.angular(.)+?\\)", "false");
+
+                            kahootConsole.evaluateJavascript(challenge, new ValueCallback<String>() {
                                 @Override
                                 public void onReceiveValue(String mask) {
                                     String newMask = StringEscapeUtils.unescapeEcmaScript(mask);
