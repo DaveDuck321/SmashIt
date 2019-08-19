@@ -12,11 +12,11 @@ import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import java.text.MessageFormat;
-import java.util.Objects;
-
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.text.MessageFormat;
+import java.util.Objects;
 
 public class SettingsActivity extends AppCompatActivity {
     Spinner namingMethod;
@@ -82,12 +82,9 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         Button newExample = findViewById(R.id.newExample);
-        newExample.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                VibrationUtils.shortVibrate(SettingsActivity.this);
-                updateExample();
-            }
+        newExample.setOnClickListener(view -> {
+            VibrationUtils.shortVibrate(SettingsActivity.this);
+            updateExample();
         });
 
         exampleName = findViewById(R.id.exampleName);

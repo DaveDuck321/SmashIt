@@ -11,6 +11,9 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
 
@@ -19,8 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import okhttp3.OkHttpClient;
 
 public class AdvancedSmashing extends AppCompatActivity {
@@ -85,56 +86,27 @@ public class AdvancedSmashing extends AppCompatActivity {
         joined = findViewById(R.id.joined);
         answered = findViewById(R.id.answered);
 
-        redBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                buttonClicked(0);
-            }
-        });
-        blueBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                buttonClicked(1);
-            }
-        });
-        yellowBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                buttonClicked(2);
-            }
-        });
-        greenBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                buttonClicked(3);
-            }
-        });
+        redBtn.setOnClickListener(v -> buttonClicked(0));
+        blueBtn.setOnClickListener(v -> buttonClicked(1));
+        yellowBtn.setOnClickListener(v -> buttonClicked(2));
+        greenBtn.setOnClickListener(v -> buttonClicked(3));
 
-        isRandom.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (queuedAnswer) {
-                    new Handler().post(new Runnable() {
-                        @Override
-                        public void run() {
-                            for (int i = 0; i < kahootSmashers.size(); i++) {
-                                kahootSmashers.get(i).AnswerQuestion(4);
-                            }
-                        }
-                    });
-                }
+        isRandom.setOnClickListener(v -> {
+            if (queuedAnswer) {
+                new Handler().post(() -> {
+                    for (int i = 0; i < kahootSmashers.size(); i++) {
+                        kahootSmashers.get(i).AnswerQuestion(4);
+                    }
+                });
             }
         });
 
         UpdateStats();
 
-        updateStatsRun = new Runnable() {
-            @Override
-            public void run() {
-                UpdateStats();
-                UpdateSelectedAnswer();
-                interval.postDelayed(updateStatsRun, 30);
-            }
+        updateStatsRun = () -> {
+            UpdateStats();
+            UpdateSelectedAnswer();
+            interval.postDelayed(updateStatsRun, 30);
         };
 
         Bundle b = getIntent().getExtras();
@@ -210,12 +182,9 @@ public class AdvancedSmashing extends AppCompatActivity {
         }
         UpdateSelectedAnswer();
         if (queuedAnswer) {
-            new Handler().post(new Runnable() {
-                @Override
-                public void run() {
-                    for (int i = 0; i < kahootSmashers.size(); i++) {
-                        kahootSmashers.get(i).AnswerQuestion(4);
-                    }
+            new Handler().post(() -> {
+                for (int i = 0; i < kahootSmashers.size(); i++) {
+                    kahootSmashers.get(i).AnswerQuestion(4);
                 }
             });
         }
