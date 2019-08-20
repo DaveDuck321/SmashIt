@@ -1,6 +1,5 @@
 package tk.smashr.smashit;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,10 +14,10 @@ import android.widget.LinearLayout;
 import android.widget.TableLayout;
 import android.widget.TextView;
 
-import java.text.MessageFormat;
-
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.text.MessageFormat;
 
 public class Smashing extends AppCompatActivity {
     int count = 0;
@@ -51,25 +50,22 @@ public class Smashing extends AppCompatActivity {
         public void run() {
             if (!hasEnded) {
                 for (Integer i = 0; i < SmashingLogic.numberOfKahoots; i++) {
-                    webViews[i].evaluateJavascript("isSmashing('" + i.toString() + "');", new ValueCallback<String>() {
-                        @Override
-                        public void onReceiveValue(String value) {
-                            value = value.substring(1, value.length() - 1);
-                            if (value.charAt(0) == 'g') {
-                                if (value.charAt(1) == 'v') {
-                                    verified[Integer.parseInt(value.substring(2))] = true;
-                                    hasJoined[Integer.parseInt(value.substring(2))] = true;
-                                } else {
-                                    verified[Integer.parseInt(value.substring(1))] = false;
-                                    hasJoined[Integer.parseInt(value.substring(1))] = true;
-                                }
+                    webViews[i].evaluateJavascript("isSmashing('" + i.toString() + "');", value -> {
+                        value = value.substring(1, value.length() - 1);
+                        if (value.charAt(0) == 'g') {
+                            if (value.charAt(1) == 'v') {
+                                verified[Integer.parseInt(value.substring(2))] = true;
+                                hasJoined[Integer.parseInt(value.substring(2))] = true;
                             } else {
-                                verified[Integer.parseInt(value)] = false;
-                                hasJoined[Integer.parseInt(value)] = false;
+                                verified[Integer.parseInt(value.substring(1))] = false;
+                                hasJoined[Integer.parseInt(value.substring(1))] = true;
                             }
-
-                            updateReadout();
+                        } else {
+                            verified[Integer.parseInt(value)] = false;
+                            hasJoined[Integer.parseInt(value)] = false;
                         }
+
+                        updateReadout();
                     });
                 }
                 handler.postDelayed(testSmashingNumber, 3000);
@@ -135,12 +131,7 @@ public class Smashing extends AppCompatActivity {
         setContentView(R.layout.activity_smashing);
 
         AlertDialog.Builder badPin = new AlertDialog.Builder(this);
-        badPin.setPositiveButton(getString(R.string.contin), null).setNegativeButton(getString(R.string.abort), new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                onBackPressed();
-            }
-        }).setMessage(getString(R.string.contiuneVerify)).setTitle(getString(R.string.invalidPin));
+        badPin.setPositiveButton(getString(R.string.contin), null).setNegativeButton(getString(R.string.abort), (dialog, which) -> onBackPressed()).setMessage(getString(R.string.contiuneVerify)).setTitle(getString(R.string.invalidPin));
         pinWrong = badPin.create();
 
         AlertDialog.Builder gameCode = new AlertDialog.Builder(this);
@@ -176,19 +167,16 @@ public class Smashing extends AppCompatActivity {
                     count++;
                     Log.println(Log.ERROR, "Ran", "count: " + count);
                     if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && count == SmashingLogic.numberOfKahoots * 2) || (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP && count == SmashingLogic.numberOfKahoots)) {
-                        handler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                hasStarted = true;
-                                for (int i = 0; i < webViews.length; i++) {
-                                    injectJS(webViews[i]);
-                                    if (!legacyMode) {
-                                        runJS(i);
-                                        handler.postDelayed(testSmashingNumber, 3000);
-                                    }
+                        handler.postDelayed(() -> {
+                            hasStarted = true;
+                            for (int i1 = 0; i1 < webViews.length; i1++) {
+                                injectJS(webViews[i1]);
+                                if (!legacyMode) {
+                                    runJS(i1);
+                                    handler.postDelayed(testSmashingNumber, 3000);
                                 }
-                                updateReadout();
                             }
+                            updateReadout();
                         }, 3000);
                     }
                     super.onPageFinished(view, url);
@@ -207,29 +195,26 @@ public class Smashing extends AppCompatActivity {
         blueButton = findViewById(R.id.BlueBtn);
         greenButton = findViewById(R.id.GreenBtn);
         allBtn = findViewById(R.id.verifyBtns);
-        View.OnClickListener orderBtn = new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (v == redButton) {
-                    redButton.setEnabled(false);
-                    redButton.setBackgroundResource(R.drawable.red_answer_pressed);
-                    ButtonClicked(0);
-                }
-                if (v == yellowButton) {
-                    yellowButton.setEnabled(false);
-                    yellowButton.setBackgroundResource(R.drawable.yellow_answer_pressed);
-                    ButtonClicked(2);
-                }
-                if (v == greenButton) {
-                    greenButton.setEnabled(false);
-                    greenButton.setBackgroundResource(R.drawable.green_answer_pressed);
-                    ButtonClicked(3);
-                }
-                if (v == blueButton) {
-                    blueButton.setEnabled(false);
-                    blueButton.setBackgroundResource(R.drawable.blue_answer_pressed);
-                    ButtonClicked(1);
-                }
+        View.OnClickListener orderBtn = v -> {
+            if (v == redButton) {
+                redButton.setEnabled(false);
+                redButton.setBackgroundResource(R.drawable.red_answer_pressed);
+                ButtonClicked(0);
+            }
+            if (v == yellowButton) {
+                yellowButton.setEnabled(false);
+                yellowButton.setBackgroundResource(R.drawable.yellow_answer_pressed);
+                ButtonClicked(2);
+            }
+            if (v == greenButton) {
+                greenButton.setEnabled(false);
+                greenButton.setBackgroundResource(R.drawable.green_answer_pressed);
+                ButtonClicked(3);
+            }
+            if (v == blueButton) {
+                blueButton.setEnabled(false);
+                blueButton.setBackgroundResource(R.drawable.blue_answer_pressed);
+                ButtonClicked(1);
             }
         };
         allBtn.setVisibility(View.INVISIBLE);

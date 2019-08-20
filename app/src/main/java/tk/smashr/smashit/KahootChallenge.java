@@ -11,7 +11,6 @@ import com.android.volley.VolleyError;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 class KahootChallenge {
     final private WebView kahootConsole;
@@ -27,32 +26,29 @@ class KahootChallenge {
 
         String getUrl = "https://kahoot.it/reserve/session/" + gamepin;
         stringRequest = new MetaRequest(com.android.volley.Request.Method.GET, getUrl, null,
-                new com.android.volley.Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        try {
-                            final String token = response.getJSONObject("headers").getString("x-kahoot-session-token");
-                            //Removes angular check, very hacky will break
-                            String challenge = response.getString("challenge");
-                            challenge = challenge.replaceAll("this.angular(.)+?\\)", "false");
+                response -> {
+                    try {
+                        final String token = response.getJSONObject("headers").getString("x-kahoot-session-token");
+                        //Removes angular check, very hacky will break
+                        String challenge = response.getString("challenge");
+                        challenge = challenge.replaceAll("this.angular(.)+?\\)", "false");
 
-                            kahootConsole.evaluateJavascript(challenge, new ValueCallback<String>() {
-                                @Override
-                                public void onReceiveValue(String mask) {
-                                    String newMask = StringEscapeUtils.unescapeEcmaScript(mask);
-                                    newMask = newMask.substring(1, newMask.length() - 1);
-                                    byte[] base64Decoded = Base64.decode(token.getBytes(), 0);
-                                    for (int i = 0; i < base64Decoded.length; i++) {
-                                        base64Decoded[i] ^= newMask.charAt(i % newMask.length());
-                                    }
-                                    parent.addToken(new String(base64Decoded));
-                                    //AdvancedSmashing.AddNewSmasher();
+                        kahootConsole.evaluateJavascript(challenge, new ValueCallback<String>() {
+                            @Override
+                            public void onReceiveValue(String mask) {
+                                String newMask = StringEscapeUtils.unescapeEcmaScript(mask);
+                                newMask = newMask.substring(1, newMask.length() - 1);
+                                byte[] base64Decoded = Base64.decode(token.getBytes(), 0);
+                                for (int i = 0; i < base64Decoded.length; i++) {
+                                    base64Decoded[i] ^= newMask.charAt(i % newMask.length());
                                 }
-                            });
+                                parent.addToken(new String(base64Decoded));
+                                //AdvancedSmashing.AddNewSmasher();
+                            }
+                        });
 
-                        } catch (JSONException e) {
-                            Log.println(Log.INFO, "Response", "Bad JSON");
-                        }
+                    } catch (JSONException e) {
+                        Log.println(Log.INFO, "Response", "Bad JSON");
                     }
                 }, new com.android.volley.Response.ErrorListener() {
             @Override
