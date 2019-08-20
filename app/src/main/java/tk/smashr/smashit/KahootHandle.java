@@ -19,8 +19,7 @@ class KahootHandle {
     private WebSocket client;
     private String clientId = "";
     private Integer currentMessageId = 2;
-    private boolean initialSubscription = true;
-    private int subscriptionRepliesReceived = 0;
+    private boolean connected = false;
     private boolean receivedQuestion = false;
     //Unideal
     private AdvancedSmashing parent;
@@ -60,11 +59,11 @@ class KahootHandle {
             if (!clientId.equals("")) {
                 message.put("clientId", clientId);
             }
-            //Log.d(TAG,"Sent message, "+("["+message.toString()+"]").replace("\\",""));
+
             client.send(("[" + message.toString() + "]").replace("\\", ""));
         } catch (JSONException e) {
             //Bad JSON
-            Log.println(Log.ERROR, "JSON", "Bad JSON!");
+            Log.e("JSON", "Bad JSON!");
         }
     }
 
@@ -74,7 +73,7 @@ class KahootHandle {
             sendMessage(message, "/service/controller");
         } catch (JSONException e) {
             //Bad JSON
-            Log.println(Log.ERROR, "JSON", "Bad JSON!");
+            Log.e("JSON", "Bad JSON!");
         }
     }
 
@@ -85,7 +84,7 @@ class KahootHandle {
             sendMessage(message, subscribe ? "/meta/subscribe" : "/meta/unsubscribe");
         } catch (JSONException e) {
             //Bad JSON
-            Log.println(Log.ERROR, "JSON", "Bad JSON!");
+            Log.e("JSON", "Bad JSON!");
         }
     }
 
@@ -104,50 +103,28 @@ class KahootHandle {
     private void handshake(JSONObject message) {
         try {
             clientId = message.getString("clientId");
-            sendSubscription("/service/controller", true);
-            sendSubscription("/service/player", true);
-            sendSubscription("/service/status", true);
+            //sendSubscription("/service/controller", true);
+            //sendSubscription("/service/player", true);
+            //sendSubscription("/service/status", true);
             currentMessageId++;
             client.send("[{\"channel\":\"/meta/connect\",\"connectionType\":\"websocket\",\"advice\":{\"timeout\":0},\"id\":\"" + (currentMessageId - 1) + "\",\"clientId\":\"" + clientId + "\"}]");
         } catch (JSONException e) {
             //Bad JSON
-            Log.println(Log.ERROR, "JSON", "Bad JSON!");
-        }
-    }
-
-    private void subscribe(JSONObject message) {
-        subscriptionRepliesReceived++;
-        if (initialSubscription && subscriptionRepliesReceived == 3) {
-            initialSubscription = false;
-            subscriptionRepliesReceived = 0;
-
-            sendSubscription("/service/controller", false);
-            sendSubscription("/service/player", false);
-            sendSubscription("/service/status", false);
-
-            sendSubscription("/service/controller", true);
-            sendSubscription("/service/player", true);
-            sendSubscription("/service/status", true);
-            sendConnectMessage();
-        }
-        if (subscriptionRepliesReceived == 6) {
-            sendLoginInfo();
-        }
-    }
-
-    private void unsubscribe(JSONObject message) {
-        subscriptionRepliesReceived++;
-        if (subscriptionRepliesReceived == 6) {
-            sendLoginInfo();
+            Log.e("JSON", "Bad JSON!");
         }
     }
 
     private void connect(JSONObject message) {
         try {
             message.getJSONObject("advice");
-            Log.d("Timeout", message.getInt("timeout") + "");
+            Log.e("Timeout", message.getInt("timeout") + "");
         } catch (JSONException e) {
             sendConnectMessage();
+            if(!connected) {
+                sendLoginInfo();
+                connected = true;
+            }
+
         }
     }
 
@@ -184,7 +161,7 @@ class KahootHandle {
             if (data.getString("type").equals("loginResponse")) {
 
                 if (data.has("error")) {
-                    //Log.e(TAG,"Bad name... Retying");
+                    Log.d("Bad name","Retying");
                     sendLoginInfo();
                 } else {
                     //parent.AddNewSmasher();
@@ -194,14 +171,13 @@ class KahootHandle {
 
         } catch (JSONException e) {
             //Bad JSON
-            Log.println(Log.ERROR, "JSON", "Bad JSON!");
+            Log.e("JSON", "Bad JSON!");
         }
     }
 
     private final class kahootListener extends WebSocketListener {
         @Override
         public void onOpen(WebSocket websocket, Response response) {
-            //Log.d(TAG, "Connected!");
             client.send("[{\"version\":\"1.0\",\"minimumVersion\":\"1.0\",\"channel\":\"/meta/handshake\",\"supportedConnectionTypes\":[\"websocket\",\"long-polling\"],\"advice\":{\"timeout\":60000,\"interval\":0},\"id\":\"1\"}]");
         }
 
@@ -216,13 +192,13 @@ class KahootHandle {
                         handshake(jsonMessage);
                         break;
                     case "/meta/subscribe":
-                        subscribe(jsonMessage);
+                        Log.e("Subscribe received", message);
                         break;
                     case "/meta/connect":
                         connect(jsonMessage);
                         break;
                     case "/meta/unsubscribe":
-                        unsubscribe(jsonMessage);
+                        Log.e("Unsubscribe received", message);
                         break;
                     case "/service/player":
                         player(jsonMessage);
