@@ -2,6 +2,7 @@ package tk.smashr.smashit;
 
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -158,8 +159,8 @@ class KahootHandle {
                 if (receivedQuestion) {
                     receivedQuestion = false;
                     parent.makeAnswerPossible();
-                    JSONObject possibleAnswers = data.getJSONObject("answerMap");
-                    AnswerQuestion(possibleAnswers.length());
+                    JSONArray possibleAnswers = data.getJSONArray("quizQuestionAnswers");
+                    AnswerQuestion(possibleAnswers.getInt(data.getInt("questionIndex")));
                 } else {
                     parent.answers.set(smasherIndex, -1);
                     receivedQuestion = true;
