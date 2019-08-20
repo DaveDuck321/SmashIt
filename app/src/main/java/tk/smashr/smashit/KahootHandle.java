@@ -21,100 +21,99 @@ class KahootHandle {
     private Integer currentMessageId = 2;
     private boolean connected = false;
     private boolean receivedQuestion = false;
-    //Unideal
+
     private AdvancedSmashing parent;
 
-    KahootHandle(int gamePin1, int smasherIndex, OkHttpClient httpClient, AdvancedSmashing parent1, String token) {
-        gamePin = gamePin1 + "";
+    KahootHandle(int gamePin, int smasherIndex, OkHttpClient httpClient, AdvancedSmashing parent, String token) {
+        this.gamePin = gamePin + "";
         this.smasherIndex = smasherIndex;
         this.httpClient = httpClient;
-        this.parent = parent1;
+        this.parent = parent;
         connectClient(token);
     }
 
     void disconnect() {
-        sendDisconnectMessage();
+        try {
+            sendDisconnectMessage();
+        } catch (JSONException e) {
+            Log.e("Disconnect failed", "Json error");
+        }
     }
 
     private void connectClient(String rawToken) {
-        Request request = new Request.Builder().url("wss://kahoot.it/cometd/" + gamePin + "/" + rawToken).addHeader("Cookie", "no.mobitroll.session=" + gamePin).addHeader("Origin", "https://kahoot.it").build();
-        kahootListener listner = new kahootListener();
-        client = httpClient.newWebSocket(request, listner);
+        Request request = new Request.Builder().url("wss://kahoot.it/cometd/" + gamePin + "/" + rawToken).addHeader("Origin", "https://kahoot.it").build();
+        kahootListener listener = new kahootListener();
+        client = httpClient.newWebSocket(request, listener);
     }
 
     void AnswerQuestion(int maxChoice) {
         int choice = parent.GetResponse(maxChoice, smasherIndex);
         if (choice != -1) {
-            currentMessageId++;
-            client.send("[{\"channel\":\"/service/controller\",\"data\":{\"id\":45,\"type\":\"message\",\"gameid\":" + gamePin + ",\"host\":\"kahoot.it\",\"content\":\"{\\\"choice\\\":" + choice + ",\\\"meta\\\":{\\\"lag\\\":64,\\\"device\\\":{\\\"userAgent\\\":\\\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36\\\",\\\"screen\\\":{\\\"width\\\":1920,\\\"height\\\":1040}}}}\"},\"id\":\"" + (currentMessageId - 1) + "\",\"clientId\":\"" + clientId + "\"}]");
+            try {
+                JSONObject choiceJson = new JSONObject();
+                choiceJson.put("choice", choice);
+
+                JSONObject dataJson = new JSONObject();
+                dataJson.put("id", 45); //This has changed before
+                dataJson.put("type", "message");
+                dataJson.put("gameid", Integer.parseInt(gamePin));
+                dataJson.put("host", "kahoot.it");
+                dataJson.put("content", choiceJson.toString());
+
+                JSONObject messageJson = new JSONObject();
+                messageJson.put("data", dataJson);
+                sendMessage(messageJson, "/service/controller");
+            } catch (JSONException e) {
+                Log.e("Answer failed", "Json error");
+            }
             parent.answers.set(smasherIndex, choice);
         }
     }
 
-    private void sendMessage(JSONObject message, String channel) {
-        try {
-            message.put("id", currentMessageId.toString());
-            currentMessageId++;
-            message.put("channel", channel);
-            if (!clientId.equals("")) {
-                message.put("clientId", clientId);
-            }
-
-            client.send(("[" + message.toString() + "]").replace("\\", ""));
-        } catch (JSONException e) {
-            //Bad JSON
-            Log.e("JSON", "Bad JSON!");
-        }
-    }
-
-    private void sendLoginInfo() {
-        try {
-            JSONObject message = new JSONObject("{\"data\":{\"type\":\"login\",\"gameid\":" + gamePin + ",\"host\":\"kahoot.it\",\"name\":\"" + parent.GetName(smasherIndex) + "\"}}");
-            sendMessage(message, "/service/controller");
-        } catch (JSONException e) {
-            //Bad JSON
-            Log.e("JSON", "Bad JSON!");
-        }
-    }
-
-    private void sendSubscription(String subscribeTo, boolean subscribe) {
-        try {
-            JSONObject message = new JSONObject();
-            message.put("subscription", subscribeTo);
-            sendMessage(message, subscribe ? "/meta/subscribe" : "/meta/unsubscribe");
-        } catch (JSONException e) {
-            //Bad JSON
-            Log.e("JSON", "Bad JSON!");
-        }
-    }
-
-    private void sendConnectMessage() {
+    private void sendMessage(JSONObject message, String channel) throws JSONException {
+        message.put("id", currentMessageId.toString());
         currentMessageId++;
-        client.send("[{\"channel\":\"/meta/connect\",\"connectionType\":\"websocket\",\"id\":\"" + (currentMessageId - 1) + "\",\"clientId\":\"" + clientId + "\"}]");
+        message.put("channel", channel);
+        if (!clientId.equals("")) {
+            message.put("clientId", clientId);
+        }
+
+        client.send(("[" + message.toString() + "]").replace("\\/", "/"));
     }
 
-    private void sendDisconnectMessage() {
-        currentMessageId++;
-        client.send("[{\"channel\":\"/meta/disconnect\",\"connectionType\":\"websocket\",\"id\":\"" + (currentMessageId - 1) + "\",\"clientId\":\"" + clientId + "\"}]");
+    private void sendLoginInfo() throws JSONException {
+        JSONObject data = new JSONObject();
+        data.put("type", "login");
+        data.put("gameid", gamePin);
+        data.put("host", "kahoot.it");
+        data.put("name", parent.GetName(smasherIndex));
+
+        JSONObject message = new JSONObject();
+        message.put("data", data);
+        sendMessage(message, "/service/controller");
+    }
+
+    private void sendConnectMessage() throws JSONException {
+        JSONObject json = new JSONObject();
+        json.put("connectionType", "websocket");
+        sendMessage(json, "/meta/connect");
+    }
+
+    private void sendDisconnectMessage() throws JSONException {
+        JSONObject json = new JSONObject();
+        json.put("connectionType", "websocket");
+        sendMessage(json, "/meta/disconnect");
+
         httpClient.dispatcher().executorService().shutdown();
     }
 
 
-    private void handshake(JSONObject message) {
-        try {
-            clientId = message.getString("clientId");
-            //sendSubscription("/service/controller", true);
-            //sendSubscription("/service/player", true);
-            //sendSubscription("/service/status", true);
-            currentMessageId++;
-            client.send("[{\"channel\":\"/meta/connect\",\"connectionType\":\"websocket\",\"advice\":{\"timeout\":0},\"id\":\"" + (currentMessageId - 1) + "\",\"clientId\":\"" + clientId + "\"}]");
-        } catch (JSONException e) {
-            //Bad JSON
-            Log.e("JSON", "Bad JSON!");
-        }
+    private void handshake(JSONObject message) throws JSONException {
+        clientId = message.getString("clientId");
+        sendConnectMessage();
     }
 
-    private void connect(JSONObject message) {
+    private void connect(JSONObject message) throws JSONException {
         try {
             message.getJSONObject("advice");
             Log.e("Timeout", message.getInt("timeout") + "");
@@ -124,54 +123,42 @@ class KahootHandle {
                 sendLoginInfo();
                 connected = true;
             }
-
         }
     }
 
-    private void player(JSONObject message) {
-        try {
-            JSONObject data = new JSONObject(message.getJSONObject("data").getString("content"));//.replace("[","\"[").replace("]","]\""));
+    private void player(JSONObject message) throws JSONException {
+        JSONObject data = new JSONObject(message.getJSONObject("data").getString("content"));
 
-            if (data.has("questionIndex")) {
-                if (receivedQuestion) {
-                    receivedQuestion = false;
-                    parent.makeAnswerPossible();
-                    JSONArray possibleAnswers = data.getJSONArray("quizQuestionAnswers");
-                    AnswerQuestion(possibleAnswers.getInt(data.getInt("questionIndex")));
-                } else {
-                    parent.answers.set(smasherIndex, -1);
-                    receivedQuestion = true;
-                }
-            } else if (data.has("isCorrect")) {
-                parent.addQuestionResult(smasherIndex, data.getBoolean("isCorrect"), data.getInt("rank"));
-                //parent.scores.set(smasherIndex,data.getInt("totalPointsWithoutBonuses"));
-            }
-        } catch (JSONException e) {
-            Log.e(getClass().getSimpleName(), e.toString());
-        }
-    }
-
-    private void controller(JSONObject message) {
-        try {
-            if (message.has("successful")) {
-                //Nothing special
+        if (data.has("questionIndex")) {
+            if (receivedQuestion) {
+                receivedQuestion = false;
+                parent.makeAnswerPossible();
+                JSONArray possibleAnswers = data.getJSONArray("quizQuestionAnswers");
+                AnswerQuestion(possibleAnswers.getInt(data.getInt("questionIndex")));
                 return;
             }
-            JSONObject data = message.getJSONObject("data");
-            if (data.getString("type").equals("loginResponse")) {
+            parent.answers.set(smasherIndex, -1);
+            receivedQuestion = true;
+        } else if (data.has("isCorrect")) {
+            parent.addQuestionResult(smasherIndex, data.getBoolean("isCorrect"), data.getInt("rank"));
+        }
+    }
 
-                if (data.has("error")) {
-                    Log.d("Bad name","Retying");
-                    sendLoginInfo();
-                } else {
-                    //parent.AddNewSmasher();
-                    parent.LoggedIn(smasherIndex, true);
-                }
+    private void controller(JSONObject message) throws JSONException {
+        if (message.has("successful")) {
+            //Nothing special
+            return;
+        }
+        JSONObject data = message.getJSONObject("data");
+        if (data.getString("type").equals("loginResponse")) {
+
+            if (data.has("error")) {
+                Log.d("Bad name","Retying");
+                sendLoginInfo();
+            } else {
+                //parent.AddNewSmasher();
+                parent.LoggedIn(smasherIndex, true);
             }
-
-        } catch (JSONException e) {
-            //Bad JSON
-            Log.e("JSON", "Bad JSON!");
         }
     }
 
@@ -191,14 +178,8 @@ class KahootHandle {
                     case "/meta/handshake":
                         handshake(jsonMessage);
                         break;
-                    case "/meta/subscribe":
-                        Log.e("Subscribe received", message);
-                        break;
                     case "/meta/connect":
                         connect(jsonMessage);
-                        break;
-                    case "/meta/unsubscribe":
-                        Log.e("Unsubscribe received", message);
                         break;
                     case "/service/player":
                         player(jsonMessage);
@@ -206,8 +187,12 @@ class KahootHandle {
                     case "/service/controller":
                         controller(jsonMessage);
                         break;
+                    case "/service/status":
+                        //Nothing important (yet)
+                        break;
                     default:
                         Log.e("Bad channel", jsonMessage.getString("channel"));
+                        Log.e("Message", message);
                 }
             } catch (JSONException e) {
                 Log.e("Bad Json", message);

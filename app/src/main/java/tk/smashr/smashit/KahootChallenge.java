@@ -18,11 +18,10 @@ class KahootChallenge {
     private final AdvancedSmashing parent;
     private final MetaRequest stringRequest;
 
-    KahootChallenge(int gamepin1, WebView kahootConsoleRef, RequestQueue queue1, AdvancedSmashing parent1) {
-        String gamepin = gamepin1 + "";
+    KahootChallenge(int gamepin, WebView kahootConsoleRef, RequestQueue queue, AdvancedSmashing parent) {
         this.kahootConsole = kahootConsoleRef;
-        this.queue = queue1;
-        this.parent = parent1;
+        this.queue = queue;
+        this.parent = parent;
 
         String getUrl = "https://kahoot.it/reserve/session/" + gamepin;
         stringRequest = new MetaRequest(com.android.volley.Request.Method.GET, getUrl, null,
@@ -33,9 +32,7 @@ class KahootChallenge {
                         String challenge = response.getString("challenge");
                         challenge = challenge.replaceAll("this.angular(.)+?\\)", "false");
 
-                        kahootConsole.evaluateJavascript(challenge, new ValueCallback<String>() {
-                            @Override
-                            public void onReceiveValue(String mask) {
+                        kahootConsole.evaluateJavascript(challenge, (mask)-> {
                                 String newMask = StringEscapeUtils.unescapeEcmaScript(mask);
                                 newMask = newMask.substring(1, newMask.length() - 1);
                                 byte[] base64Decoded = Base64.decode(token.getBytes(), 0);
@@ -43,8 +40,6 @@ class KahootChallenge {
                                     base64Decoded[i] ^= newMask.charAt(i % newMask.length());
                                 }
                                 parent.addToken(new String(base64Decoded));
-                                //AdvancedSmashing.AddNewSmasher();
-                            }
                         });
 
                     } catch (JSONException e) {

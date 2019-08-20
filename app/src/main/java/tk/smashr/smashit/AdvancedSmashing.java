@@ -39,25 +39,16 @@ public class AdvancedSmashing extends AppCompatActivity {
     int currentId = -1;
     int selectedAnswer = -1;
     List<KahootHandle> kahootSmashers = new ArrayList<>();
-    List<OkHttpClient> client = new ArrayList<>();
+    List<OkHttpClient> httpClients = new ArrayList<>();
 
     List<KahootChallenge> challenges = new ArrayList<>();
 
     //UI components
-    Button redBtn;
-    Button blueBtn;
-    Button yellowBtn;
-    Button greenBtn;
-
-    TextView redText;
-    TextView blueText;
-    TextView yellowText;
-    TextView greenText;
+    Button redBtn, blueBtn, yellowBtn, greenBtn;
+    TextView redText, blueText, yellowText, greenText;
 
     CheckBox isRandom;
-
-    TextView joined;
-    TextView answered;
+    TextView joined, answered;
 
     Handler interval = new Handler();
     Runnable updateStatsRun;
@@ -130,19 +121,10 @@ public class AdvancedSmashing extends AppCompatActivity {
         kahootConsole.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
-
                 if (!launched) {
-                    //startService(service);
-                    //if (SmashingLogic.smashingMode == 0)
-                    //{
                     for (int i = 0; i < SmashingLogic.numberOfKahoots; i++) {
                         challenges.add(new KahootChallenge(gamePin, kahootConsole, queue, AdvancedSmashing.this));
                     }
-                    //}
-                    //else
-                    //{
-                    //    challenges.add(new KahootChallenge(gamePin, kahootConsole, queue, AdvancedSmashing.this));
-                    //}
                 }
                 launched = true;
             }
@@ -160,7 +142,6 @@ public class AdvancedSmashing extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-
         for (int i = 0; i < kahootSmashers.size(); i++) {
             kahootSmashers.get(i).disconnect();
         }
@@ -207,13 +188,13 @@ public class AdvancedSmashing extends AppCompatActivity {
     public void addToken(String token) {
         currentId++;
         if (currentId % 5 == 0) {
-            client.add(new OkHttpClient());
+            httpClients.add(new OkHttpClient());
         }
         rightAnswer.add(false);
         ranks.add(100);
         answers.add(-1);
         loggedIn.add(false);
-        kahootSmashers.add(new KahootHandle(gamePin, currentId, client.get(client.size() - 1), this, token));
+        kahootSmashers.add(new KahootHandle(gamePin, currentId, httpClients.get(httpClients.size() - 1), this, token));
     }
 
     public String GetName(int index) {
@@ -239,7 +220,8 @@ public class AdvancedSmashing extends AppCompatActivity {
             int choice = (int) (Math.random() * choices);
             answers.set(index, choice);
             return choice;
-        } else if (selectedAnswer != -1) {
+        }
+        if (selectedAnswer != -1) {
             answers.set(index, selectedAnswer);
             return selectedAnswer;
         }
@@ -272,31 +254,21 @@ public class AdvancedSmashing extends AppCompatActivity {
                 loggedInCount++;
             }
         }
-        int red = 0;
-        int blue = 0;
-        int yellow = 0;
-        int green = 0;
+        int counts[] = {0, 0, 0, 0};
+        int total = 0;
         for (int i = 0; i < answers.size(); i++) {
-            switch (answers.get(i)) {
-                case 0:
-                    red++;
-                    break;
-                case 1:
-                    blue++;
-                    break;
-                case 2:
-                    yellow++;
-                    break;
-                case 3:
-                    green++;
+            int answer = answers.get(i);
+            if(answer!=-1) {
+                counts[answer]++;
+                total++;
             }
         }
         joined.setText(MessageFormat.format("{0} {1}/{2}", getString(R.string.joined), loggedInCount, loggedIn.size()));
-        answered.setText(MessageFormat.format("{0} {1}/{2}", getString(R.string.answered), red + blue + yellow + green, loggedIn.size()));
-        redText.setText(MessageFormat.format("{0}/{1}", red, loggedIn.size()));
-        blueText.setText(MessageFormat.format("{0}/{1}", blue, loggedIn.size()));
-        yellowText.setText(MessageFormat.format("{0}/{1}", yellow, loggedIn.size()));
-        greenText.setText(MessageFormat.format("{0}/{1}", green, loggedIn.size()));
+        answered.setText(MessageFormat.format("{0} {1}/{2}", getString(R.string.answered), total, loggedIn.size()));
+        redText.setText(MessageFormat.format("{0}/{1}", counts[0], loggedIn.size()));
+        blueText.setText(MessageFormat.format("{0}/{1}", counts[1], loggedIn.size()));
+        yellowText.setText(MessageFormat.format("{0}/{1}", counts[2], loggedIn.size()));
+        greenText.setText(MessageFormat.format("{0}/{1}", counts[3], loggedIn.size()));
     }
 
     public void makeAnswerPossible() {
